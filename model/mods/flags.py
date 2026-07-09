@@ -1,15 +1,19 @@
-from typed.flags import __FLAGS__, Flags as __Flags__, flag as __flag__
+from typed.mods.flags import __FLAGS__, Flags as __Flags__, flag as __flag__
 
 class ModelFlags(metaclass=__FLAGS__):
     def __init__(
         self,
-        is_model:   bool=False,
-        is_strict:  bool=False,
-        is_ordered: bool=False
+        is_model:      bool = False,
+        is_strict:     bool = False,
+        is_ordered:    bool = False,
+        is_typed_dict: bool = False,
+        is_lazy:       bool = False
     ):
         self.is_model = is_model
         self.is_strict = is_strict
         self.is_ordered = is_ordered
+        self.is_typed_dict = is_typed_dict
+        self.is_lazy = is_lazy
 
 class Flags(__Flags__):
     def __init__(
@@ -33,8 +37,13 @@ class Flags(__Flags__):
         is_related: bool=False,
         is_filtered: bool=False,
         model: ModelFlags=None
-        ):
-        super().__init__(is_discourse, is_reducer, is_predicate, is_evaluator, is_quantifier, is_parametric, is_expression, is_constructor, is_dependent, is_algebraic, is_enumerable, is_finite, is_bounded, is_extensional, is_prod, is_coprod, is_related, is_filtered)
+    ):
+        super().__init__(
+            is_discourse, is_reducer, is_predicate, is_evaluator, is_quantifier, 
+            is_parametric, is_expression, is_constructor, is_dependent, is_algebraic, 
+            is_enumerable, is_finite, is_bounded, is_extensional, is_prod, 
+            is_coprod, is_related, is_filtered
+        )
         if model is None:
             model = ModelFlags()
         self.model = model
@@ -44,3 +53,5 @@ class flag(__flag__):
         is_model = "is_model"
         is_strict = "is_strict"
         is_ordered = "is_ordered"
+        is_typed_dict = "is_typed_dict"
+        is_lazy = "is_lazy"
