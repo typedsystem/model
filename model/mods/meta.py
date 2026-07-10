@@ -4,7 +4,8 @@ class SCHEMA(DICT):
     __cache__ = {}
 
     def __isterm__(typ, trm):
-        from typed import every, check, prop
+        from typed import every, prop
+        from model.mods.check import check
         if not check.isinstance(trm, dict) and not check.issub(prop.typeof(trm, level=2), DICT):
             return False
         fields = getattr(typ, "__fields__", None)
@@ -57,9 +58,8 @@ class SCHEMA(DICT):
         display_name = f"Schema({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "Schema"
 
         from model.mods.flags import Flags, ModelFlags
-        from typed.mods.init import TYPESYSTEM
+        from typed import TYPESYSTEM, Str
         types_set = set(fields.values()) if fields else set()
-        from typed import Str
 
         _fields = fields
         _types_set = types_set
@@ -173,7 +173,6 @@ class STRICT_SCHEMA(SCHEMA):
         return True
 
     def __issub__(typ, other):
-        from typed.mods.typesystem import issub
         from typed.mods.init import every
         from model.mods.check import check
 
@@ -184,7 +183,7 @@ class STRICT_SCHEMA(SCHEMA):
                 if check.model.isstrict(other):
                     if set(typ_fields.keys()) != set(other_fields.keys()):
                         return False
-                    return every(issub(typ_fields[k], other_fields[k]) for k in other_fields)
+                    return every(check.issub(typ_fields[k], other_fields[k]) for k in other_fields)
         return super(SCHEMA, typ).__issub__(other)
 
     def __call__(met, typesystem=None, __check__: bool=None, **fields):
@@ -195,7 +194,7 @@ class STRICT_SCHEMA(SCHEMA):
 
         from model.mods.resolve import resolve
         from model.mods.check import check
-        from typed.mods.types.atomic import Str
+        from typed import Str
 
         typesystem = resolve.typesystem.entity(typesystem)
         resolved_check = resolve.model.check(__check__)
@@ -210,7 +209,7 @@ class STRICT_SCHEMA(SCHEMA):
         display_name = f"StrictSchema({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "StrictSchema"
 
         from model.mods.flags import Flags, ModelFlags
-        from typed.mods.init import TYPESYSTEM
+        from typed import TYPESYSTEM
         types_set = set(fields.values()) if fields else set()
 
         _fields = fields
@@ -242,8 +241,10 @@ class MODEL(TYPE):
 
     def __isterm__(typ, trm):
         from typed.mods.typesystem import isterm
-        if not isinstance(trm, type):
-            return False
+        if getattr(typ, '__is_base_model__', False):
+            return isinstance(trm, type)
+        if isinstance(trm, typ):
+            return True
         fields = getattr(typ, "__fields__", {})
         for key, expected_type in fields.items():
             if not hasattr(trm, key):
@@ -266,8 +267,8 @@ class MODEL(TYPE):
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        from typed.mods.typesystem import nameof
-        display_name = f"Model({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "Model"
+        from typed import prop
+        display_name = f"Model({', '.join(f'{k}={prop.nameof(v)}' for k, v in fields.items())})" if fields else "Model"
         bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
         _fields = fields
@@ -315,8 +316,8 @@ class ORDERED_MODEL(MODEL):
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        from typed.mods.typesystem import nameof
-        display_name = f"OrderedModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "OrderedModel"
+        from typed import prop
+        display_name = f"OrderedModel({', '.join(f'{k}={prop.nameof(v)}' for k, v in fields.items())})" if fields else "OrderedModel"
         bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
         _fields = fields
@@ -363,8 +364,8 @@ class STRICT_MODEL(MODEL):
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        from typed.mods.typesystem import nameof
-        display_name = f"StrictModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "StrictModel"
+        from typed import prop
+        display_name = f"StrictModel({', '.join(f'{k}={prop.nameof(v)}' for k, v in fields.items())})" if fields else "StrictModel"
         bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
         _fields = fields
@@ -398,8 +399,8 @@ class LAZY_MODEL(MODEL):
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        from typed.mods.typesystem import nameof
-        display_name = f"LazyModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "LazyModel"
+        from typed import prop
+        display_name = f"LazyModel({', '.join(f'{k}={prop.nameof(v)}' for k, v in fields.items())})" if fields else "LazyModel"
         bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
         _fields = fields
@@ -433,8 +434,8 @@ class LAZY_ORDERED_MODEL(LAZY_MODEL, ORDERED_MODEL):
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        from typed.mods.typesystem import nameof
-        display_name = f"LazyOrderedModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "LazyOrderedModel"
+        from typed import prop
+        display_name = f"LazyOrderedModel({', '.join(f'{k}={prop.nameof(v)}' for k, v in fields.items())})" if fields else "LazyOrderedModel"
         bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
         _fields = fields
@@ -468,8 +469,8 @@ class LAZY_STRICT_MODEL(LAZY_MODEL, STRICT_MODEL):
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        from typed.mods.typesystem import nameof
-        display_name = f"LazyStrictModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "LazyStrictModel"
+        from typed import prop
+        display_name = f"LazyStrictModel({', '.join(f'{k}={prop.nameof(v)}' for k, v in fields.items())})" if fields else "LazyStrictModel"
         bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
         _fields = fields

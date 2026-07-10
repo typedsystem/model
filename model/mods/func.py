@@ -51,8 +51,9 @@ class model:
 
 
 def field(func):
-    from typed.func import hints
+    from typed.mods.func import hints
     from typed.err import NotDefined
+    import functools
 
     h = hints(func)
     if 'return' not in h:
@@ -67,38 +68,75 @@ def field(func):
     from typed.mods.func import signature
     sig = signature(func)
 
+    @functools.wraps(func)
     def getter(self):
         value = func(self)
-        from typed.check import check
+        from typed.mods.check import check
 
         if not check.bind.cod(func, sig, value):
             from model.mods.err import FieldErr
             from model.mods.check import _safe_term
 
             raise FieldErr(
-                message=f"Field has invalid type",
-                key=func.__name__,
+                message=f"Field returned invalid type.",
+                key=func,
                 field=_safe_term(value),
                 expected=(sig.cod,),
                 received=type(value)
             )
         return value
+
     return property(getter)
 
 
-def schema(obj) -> dict:
-    meta = type(obj)
+def schema(obj):
+    from model.mods.check import check
 
+    def _traverse(val):
+        if check.model.ismodel(type(val)):
+            return schema(val)
+        elif isinstance(val, list):
+            return [_traverse(v) for v in val]
+        elif isinstance(val, dict):
+            return {k: _traverse(v) for k, v in val.items()}
+        elif isinstance(val, tuple):
+            return tuple(_traverse(v) for v in val)
+        return val
+
+    if check.model.ismodel(obj):
+        from model.mods.types import Schema, OrderedSchema, StrictSchema
+        from typed.mods.func import hints
+        from typed import get
+
+        schema_fields = dict(getattr(obj, "__fields__", {}))
+
+        for key in dir(obj):
+            attr = getattr(obj, key, None)
+            if isinstance(attr, property):
+                h = hints(attr.fget)
+                if 'return' in h:
+                    schema_fields[key] = h['return']
+
+        is_strict = get(obj, "__flags__.model.is_strict", False)
+        is_ordered = get(obj, "__flags__.model.is_ordered", False)
+
+        if is_strict:
+            return StrictSchema(**schema_fields)
+        if is_ordered:
+            return OrderedSchema(**schema_fields)
+        return Schema(**schema_fields)
+
+    meta = type(obj)
     fields = getattr(meta, "__fields__", {})
-    out = {
-        key: getattr(obj, key) 
-        for key in fields 
-        if hasattr(obj, key)
-    }
+    out = {}
+
+    for key in fields:
+        if hasattr(obj, key):
+            out[key] = _traverse(getattr(obj, key))
 
     for key in dir(meta):
         attr = getattr(meta, key, None)
         if isinstance(attr, property):
-            out[key] = getattr(obj, key)
+            out[key] = _traverse(getattr(obj, key))
 
     return out
