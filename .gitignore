@@ -1,5 +1,6 @@
 build/
 dist/
+model/__test__.py
 __pycache__/
 *.py[oc]
 wheels/

@@ -1,6 +1,6 @@
 from typed.meta import DICT, TYPE
 
-class TYPED_DICT(DICT):
+class SCHEMA(DICT):
     __cache__ = {}
 
     def __isterm__(typ, trm):
@@ -36,6 +36,11 @@ class TYPED_DICT(DICT):
         return super().__issub__(other)
 
     def __call__(met, typesystem=None, __check__: bool=None, **fields):
+        if not getattr(met, '__is_base_schema__', False):
+            from model.mods.check import require
+            require.model.validate(met, fields)
+            return dict(**fields)
+
         from model.mods.resolve import resolve
         from model.mods.check import require
 
@@ -49,29 +54,39 @@ class TYPED_DICT(DICT):
         if resolved_check and fields:
             require.every.ismember(set(fields.values()), typesystem)
 
-        display_name = f"TypedDict({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "TypedDict"
+        display_name = f"Schema({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "Schema"
 
         from model.mods.flags import Flags, ModelFlags
         from typed.mods.init import TYPESYSTEM
         types_set = set(fields.values()) if fields else set()
         from typed import Str
 
-        class TypedDict(met, metaclass=TYPED_DICT):
+        _fields = fields
+        _types_set = types_set
+        _display_name = display_name
+        _resolved_check = resolved_check
+        _typesystems = {TYPESYSTEM, typesystem}
+
+        class Schema(met, metaclass=SCHEMA):
             __kind__ = "type"
-            __flags__ = Flags(is_constructor=True, model=ModelFlags(is_typed_dict=True))
-            __typesystems__ = {TYPESYSTEM, typesystem}
-            __display__ = display_name
-            __fields__ = fields
-            __types__ = types_set
+            __flags__ = Flags(is_constructor=True, model=ModelFlags(is_schema=True))
+            __typesystems__ = _typesystems
+            __display__ = _display_name
+            __fields__ = _fields
+            __types__ = _types_set
             __key_type__ = Str
-            __check__ = resolved_check
+            __check__ = _resolved_check
+            __is_base_schema__ = False
 
-        TypedDict.__name__ = display_name
-        met.__cache__[cache_key] = TypedDict
-        return TypedDict
+        for k, v in fields.items():
+            type.__setattr__(Schema, k, v)
+
+        Schema.__name__ = display_name
+        met.__cache__[cache_key] = Schema
+        return Schema
 
 
-class TYPED_DICT_ORDERED(TYPED_DICT):
+class ORDERED_SCHEMA(SCHEMA):
     def __isterm__(typ, trm):
         if not super().__isterm__(trm):
             return False
@@ -95,12 +110,17 @@ class TYPED_DICT_ORDERED(TYPED_DICT):
                     if filtered_typ_fields != list(other_fields.keys()):
                         return False
                 return True
-        return super(TYPED_DICT, typ).__issub__(other)
+        return super(SCHEMA, typ).__issub__(other)
 
     def __call__(met, typesystem=None, __check__: bool = None, **fields):
+        if not getattr(met, '__is_base_schema__', False):
+            from model.mods.check import require
+            require.model.validate(met, fields)
+            return dict(**fields)
+
         from model.mods.resolve import resolve
         from model.mods.check import check
-        from typed.mods.types.atomic import Str
+        from typed import Str
 
         typesystem = resolve.typesystem.entity(typesystem)
         resolved_check = resolve.model.check(__check__)
@@ -112,28 +132,38 @@ class TYPED_DICT_ORDERED(TYPED_DICT):
         if resolved_check and fields:
             check.every.ismember(set(fields.values()), typesystem)
 
-        display_name = f"TypedDictOrdered({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "TypedDictOrdered"
+        display_name = f"OrderedSchema({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "OrderedSchema"
 
         from model.mods.flags import Flags, ModelFlags
         from typed.mods.init import TYPESYSTEM
         types_set = set(fields.values()) if fields else set()
 
-        class TypedDictOrdered(met, metaclass=TYPED_DICT_ORDERED):
+        _fields = fields
+        _types_set = types_set
+        _display_name = display_name
+        _resolved_check = resolved_check
+        _typesystems = {TYPESYSTEM, typesystem}
+
+        class OrderedSchema(met, metaclass=type(met)):
             __kind__ = "type"
-            __flags__ = Flags(is_constructor=True, model=ModelFlags(is_typed_dict=True, is_ordered=True))
-            __typesystems__ = {TYPESYSTEM, typesystem}
-            __display__ = display_name
-            __fields__ = fields
-            __types__ = types_set
+            __flags__ = Flags(is_constructor=True, model=ModelFlags(is_schema=True, is_ordered=True))
+            __typesystems__ = _typesystems
+            __display__ = _display_name
+            __fields__ = _fields
+            __types__ = _types_set
             __key_type__ = Str
-            __check__ = resolved_check
+            __check__ = _resolved_check
+            __is_base_schema__ = False
 
-        TypedDictOrdered.__name__ = display_name
-        met.__cache__[cache_key] = TypedDictOrdered
-        return TypedDictOrdered
+        for k, v in fields.items():
+            type.__setattr__(OrderedSchema, k, v)
+
+        OrderedSchema.__name__ = display_name
+        met.__cache__[cache_key] = OrderedSchema
+        return OrderedSchema
 
 
-class TYPED_DICT_STRICT(TYPED_DICT):
+class STRICT_SCHEMA(SCHEMA):
     def __isterm__(typ, trm):
         if not super().__isterm__(trm):
             return False
@@ -155,9 +185,14 @@ class TYPED_DICT_STRICT(TYPED_DICT):
                     if set(typ_fields.keys()) != set(other_fields.keys()):
                         return False
                     return every(issub(typ_fields[k], other_fields[k]) for k in other_fields)
-        return super(TYPED_DICT, typ).__issub__(other)
+        return super(SCHEMA, typ).__issub__(other)
 
-    def __call__(met, typesystem=None, __check__: bool = None, **fields):
+    def __call__(met, typesystem=None, __check__: bool=None, **fields):
+        if not getattr(met, '__is_base_schema__', False):
+            from model.mods.check import require
+            require.model.validate(met, fields)
+            return dict(**fields)
+
         from model.mods.resolve import resolve
         from model.mods.check import check
         from typed.mods.types.atomic import Str
@@ -172,25 +207,35 @@ class TYPED_DICT_STRICT(TYPED_DICT):
         if resolved_check and fields:
             check.every.ismember(set(fields.values()), typesystem)
 
-        display_name = f"StrictTypedDict({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "StrictTypedDict"
+        display_name = f"StrictSchema({', '.join(f'{k}={typesystem.nameof(v)}' for k, v in fields.items())})" if fields else "StrictSchema"
 
         from model.mods.flags import Flags, ModelFlags
         from typed.mods.init import TYPESYSTEM
         types_set = set(fields.values()) if fields else set()
 
-        class StrictTypedDict(met, metaclass=TYPED_DICT_STRICT):
-            __kind__ = "type"
-            __flags__ = Flags(is_constructor=True, model=ModelFlags(is_typed_dict=True, is_strict=True))
-            __typesystems__ = {TYPESYSTEM, typesystem}
-            __display__ = display_name
-            __fields__ = fields
-            __types__ = types_set
-            __key_type__ = Str
-            __check__ = resolved_check
+        _fields = fields
+        _types_set = types_set
+        _display_name = display_name
+        _resolved_check = resolved_check
+        _typesystems = {TYPESYSTEM, typesystem}
 
-        StrictTypedDict.__name__ = display_name
-        met.__cache__[cache_key] = StrictTypedDict
-        return StrictTypedDict
+        class StrictSchema(met, metaclass=type(met)):
+            __kind__ = "type"
+            __flags__ = Flags(is_constructor=True, model=ModelFlags(is_schema=True, is_strict=True))
+            __typesystems__ = _typesystems
+            __display__ = _display_name
+            __fields__ = _fields
+            __types__ = _types_set
+            __key_type__ = Str
+            __check__ = _resolved_check
+            __is_base_schema__ = False
+
+        for k, v in fields.items():
+            type.__setattr__(StrictSchema, k, v)
+
+        StrictSchema.__name__ = display_name
+        met.__cache__[cache_key] = StrictSchema
+        return StrictSchema
 
 class MODEL(TYPE):
     __cache__ = {}
@@ -207,23 +252,44 @@ class MODEL(TYPE):
                 return False
         return True
 
-    def __call__(met, **fields):
-        cache_key = (met, frozenset(fields.items()))
+    def __call__(met, __origin_cls__=None, __defaults__=None, **fields):
+        if not getattr(met, '__is_base_model__', False):
+            from model.mods.check import require
+            require.model.validate(met, fields)
+
+            instance = super().__call__()
+            for k, v in fields.items():
+                setattr(instance, k, v)
+            return instance
+
+        cache_key = (met, frozenset(fields.items()), __origin_cls__)
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        display_name = f"Model({', '.join(f'{k}={v}' for k, v in fields.items())})" if fields else "Model"
+        from typed.mods.typesystem import nameof
+        display_name = f"Model({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "Model"
+        bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
-        class Model(met, metaclass=type(met)):
+        _fields = fields
+        _defaults = __defaults__ if __defaults__ is not None else {}
+        _display_name = display_name
+
+        class Model(*bases, metaclass=type(met)):
             __kind__ = "type"
-            __display__ = display_name
-            __fields__ = fields
+            __display__ = _display_name
+            __fields__ = _fields
+            __defaults__ = _defaults
+            __is_base_model__ = False
 
-        Model.__name__ = display_name
+        for k, v in fields.items():
+            type.__setattr__(Model, k, v)
+
+        Model.__name__ = getattr(__origin_cls__, '__name__', display_name)
         met.__cache__[cache_key] = Model
         return Model
 
-class MODEL_ORDERED(MODEL):
+
+class ORDERED_MODEL(MODEL):
     def __isterm__(typ, trm):
         if not super().__isterm__(trm):
             return False
@@ -235,23 +301,44 @@ class MODEL_ORDERED(MODEL):
                 return False
         return True
 
-    def __call__(met, **fields):
-        cache_key = (met, tuple(fields.items()))
+    def __call__(met, __origin_cls__=None, __defaults__=None, **fields):
+        if not getattr(met, '__is_base_model__', False):
+            from model.mods.check import require
+            require.model.validate(met, fields)
+
+            instance = super().__call__()
+            for k, v in fields.items():
+                setattr(instance, k, v)
+            return instance
+
+        cache_key = (met, tuple(fields.items()), __origin_cls__)
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        display_name = f"ModelOrdered({', '.join(f'{k}={v}' for k, v in fields.items())})" if fields else "ModelOrdered"
+        from typed.mods.typesystem import nameof
+        display_name = f"OrderedModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "OrderedModel"
+        bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
-        class ModelOrdered(met, metaclass=type(met)):
+        _fields = fields
+        _defaults = __defaults__ if __defaults__ is not None else {}
+        _display_name = display_name
+
+        class OrderedModel(*bases, metaclass=type(met)):
             __kind__ = "type"
-            __display__ = display_name
-            __fields__ = fields
+            __display__ = _display_name
+            __fields__ = _fields
+            __defaults__ = _defaults
+            __is_base_model__ = False
 
-        ModelOrdered.__name__ = display_name
-        met.__cache__[cache_key] = ModelOrdered
-        return ModelOrdered
+        for k, v in fields.items():
+            type.__setattr__(OrderedModel, k, v)
 
-class MODEL_STRICT(MODEL):
+        OrderedModel.__name__ = getattr(__origin_cls__, '__name__', display_name)
+        met.__cache__[cache_key] = OrderedModel
+        return OrderedModel
+
+
+class STRICT_MODEL(MODEL):
     def __isterm__(typ, trm):
         if not super().__isterm__(trm):
             return False
@@ -262,69 +349,143 @@ class MODEL_STRICT(MODEL):
                 return False
         return True
 
-    def __call__(met, **fields):
-        cache_key = (met, frozenset(fields.items()))
+    def __call__(met, __origin_cls__=None, __defaults__=None, **fields):
+        if not getattr(met, '__is_base_model__', False):
+            from model.mods.check import require
+            require.model.validate(met, fields)
+
+            instance = super().__call__()
+            for k, v in fields.items():
+                setattr(instance, k, v)
+            return instance
+
+        cache_key = (met, frozenset(fields.items()), __origin_cls__)
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        display_name = f"ModelStrict({', '.join(f'{k}={v}' for k, v in fields.items())})" if fields else "ModelStrict"
+        from typed.mods.typesystem import nameof
+        display_name = f"StrictModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "StrictModel"
+        bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
-        class ModelStrict(met, metaclass=type(met)):
+        _fields = fields
+        _defaults = __defaults__ if __defaults__ is not None else {}
+        _display_name = display_name
+
+        class StrictModel(*bases, metaclass=type(met)):
             __kind__ = "type"
-            __display__ = display_name
-            __fields__ = fields
+            __display__ = _display_name
+            __fields__ = _fields
+            __defaults__ = _defaults
+            __is_base_model__ = False
 
-        ModelStrict.__name__ = display_name
-        met.__cache__[cache_key] = ModelStrict
-        return ModelStrict
+        for k, v in fields.items():
+            type.__setattr__(StrictModel, k, v)
+
+        StrictModel.__name__ = getattr(__origin_cls__, '__name__', display_name)
+        met.__cache__[cache_key] = StrictModel
+        return StrictModel
+
 
 class LAZY_MODEL(MODEL):
-    def __call__(met, **fields):
-        cache_key = (met, frozenset(fields.items()))
+    def __call__(met, __origin_cls__=None, __defaults__=None, **fields):
+        if not getattr(met, '__is_base_model__', False):
+            instance = super().__call__()
+            for k, v in fields.items():
+                setattr(instance, k, v)
+            return instance
+
+        cache_key = (met, frozenset(fields.items()), __origin_cls__)
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        display_name = f"LazyModel({', '.join(f'{k}={v}' for k, v in fields.items())})" if fields else "LazyModel"
+        from typed.mods.typesystem import nameof
+        display_name = f"LazyModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "LazyModel"
+        bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
-        class LazyModel(met, metaclass=type(met)):
+        _fields = fields
+        _defaults = __defaults__ if __defaults__ is not None else {}
+        _display_name = display_name
+
+        class LazyModel(*bases, metaclass=type(met)):
             __kind__ = "type"
-            __display__ = display_name
-            __fields__ = fields
+            __display__ = _display_name
+            __fields__ = _fields
+            __defaults__ = _defaults
+            __is_base_model__ = False
 
-        LazyModel.__name__ = display_name
+        for k, v in fields.items():
+            type.__setattr__(LazyModel, k, v)
+
+        LazyModel.__name__ = getattr(__origin_cls__, '__name__', display_name)
         met.__cache__[cache_key] = LazyModel
         return LazyModel
 
-class LAZY_MODEL_ORDERED(MODEL_ORDERED):
-    def __call__(met, **fields):
-        cache_key = (met, tuple(fields.items()))
+
+class LAZY_ORDERED_MODEL(LAZY_MODEL, ORDERED_MODEL):
+    def __call__(met, __origin_cls__=None, __defaults__=None, **fields):
+        if not getattr(met, '__is_base_model__', False):
+            instance = super().__call__()
+            for k, v in fields.items():
+                setattr(instance, k, v)
+            return instance
+
+        cache_key = (met, tuple(fields.items()), __origin_cls__)
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        display_name = f"LazyModelOrdered({', '.join(f'{k}={v}' for k, v in fields.items())})" if fields else "LazyModelOrdered"
+        from typed.mods.typesystem import nameof
+        display_name = f"LazyOrderedModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "LazyOrderedModel"
+        bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
-        class LazyModelOrdered(met, metaclass=type(met)):
+        _fields = fields
+        _defaults = __defaults__ if __defaults__ is not None else {}
+        _display_name = display_name
+
+        class LazyOrderedModel(*bases, metaclass=type(met)):
             __kind__ = "type"
-            __display__ = display_name
-            __fields__ = fields
+            __display__ = _display_name
+            __fields__ = _fields
+            __defaults__ = _defaults
+            __is_base_model__ = False
 
-        LazyModelOrdered.__name__ = display_name
-        met.__cache__[cache_key] = LazyModelOrdered
-        return LazyModelOrdered
+        for k, v in fields.items():
+            type.__setattr__(LazyOrderedModel, k, v)
 
-class LAZY_MODEL_STRICT(MODEL_STRICT):
-    def __call__(met, **fields):
-        cache_key = (met, frozenset(fields.items()))
+        LazyOrderedModel.__name__ = getattr(__origin_cls__, '__name__', display_name)
+        met.__cache__[cache_key] = LazyOrderedModel
+        return LazyOrderedModel
+
+
+class LAZY_STRICT_MODEL(LAZY_MODEL, STRICT_MODEL):
+    def __call__(met, __origin_cls__=None, __defaults__=None, **fields):
+        if not getattr(met, '__is_base_model__', False):
+            instance = super().__call__()
+            for k, v in fields.items():
+                setattr(instance, k, v)
+            return instance
+
+        cache_key = (met, frozenset(fields.items()), __origin_cls__)
         if cache_key in met.__cache__:
             return met.__cache__[cache_key]
 
-        display_name = f"LazyModelStrict({', '.join(f'{k}={v}' for k, v in fields.items())})" if fields else "LazyModelStrict"
+        from typed.mods.typesystem import nameof
+        display_name = f"LazyStrictModel({', '.join(f'{k}={nameof(v)}' for k, v in fields.items())})" if fields else "LazyStrictModel"
+        bases = (met, __origin_cls__) if __origin_cls__ else (met,)
 
-        class LazyModelStrict(met, metaclass=type(met)):
+        _fields = fields
+        _defaults = __defaults__ if __defaults__ is not None else {}
+        _display_name = display_name
+
+        class LazyStrictModel(*bases, metaclass=type(met)):
             __kind__ = "type"
-            __display__ = display_name
-            __fields__ = fields
+            __display__ = _display_name
+            __fields__ = _fields
+            __defaults__ = _defaults
+            __is_base_model__ = False
 
-        LazyModelStrict.__name__ = display_name
-        met.__cache__[cache_key] = LazyModelStrict
-        return LazyModelStrict
+        for k, v in fields.items():
+            type.__setattr__(LazyStrictModel, k, v)
+
+        LazyStrictModel.__name__ = getattr(__origin_cls__, '__name__', display_name)
+        met.__cache__[cache_key] = LazyStrictModel
+        return LazyStrictModel

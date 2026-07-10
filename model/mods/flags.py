@@ -6,13 +6,13 @@ class ModelFlags(metaclass=__FLAGS__):
         is_model:      bool = False,
         is_strict:     bool = False,
         is_ordered:    bool = False,
-        is_typed_dict: bool = False,
+        is_schema:     bool = False,
         is_lazy:       bool = False
     ):
         self.is_model = is_model
         self.is_strict = is_strict
         self.is_ordered = is_ordered
-        self.is_typed_dict = is_typed_dict
+        self.is_schema = is_schema
         self.is_lazy = is_lazy
 
 class Flags(__Flags__):
@@ -53,5 +53,5 @@ class flag(__flag__):
         is_model = "is_model"
         is_strict = "is_strict"
         is_ordered = "is_ordered"
-        is_typed_dict = "is_typed_dict"
+        is_schema = "is_schema"
         is_lazy = "is_lazy"
