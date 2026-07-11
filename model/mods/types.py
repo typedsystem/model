@@ -5,10 +5,6 @@ from model.mods.meta import (
 )
 from model.mods.flags import Flags, ModelFlags
 
-# ==========================================
-# SCHEMAS 
-# ==========================================
-
 class Schema(metaclass=SCHEMA):
     __flags__   = Flags(is_constructor=True, model=ModelFlags(is_schema=True))
     __is_base_schema__ = True
@@ -31,6 +27,10 @@ class Schema(metaclass=SCHEMA):
     def __contains__(trm, key):
         return key in trm.__dict__
 
+    @classmethod
+    def unwrap(cls):
+        from model.mods.func import unwrap as _unwrap
+        return _unwrap(cls)
 
 class OrderedSchema(Schema, metaclass=ORDERED_SCHEMA):
     """The constructor type of strictly ordered schemas."""
@@ -41,25 +41,18 @@ class OrderedSchema(Schema, metaclass=ORDERED_SCHEMA):
 
 
 class StrictSchema(Schema, metaclass=STRICT_SCHEMA):
-    """The constructor type of strictly typed schemas."""
     __flags__   = Flags(is_constructor=True, model=ModelFlags(is_schema=True, is_strict=True))
     __is_base_schema__ = True
     __null__    = {}
     __builtin__ = dict
 
 
-# ==========================================
-# MODELS
-# ==========================================
-
 class Model(metaclass=MODEL):
-    """The constructor type of structured classes (Models)."""
     __flags__ = Flags(is_constructor=True, model=ModelFlags(is_model=True))
     __is_base_model__ = True
 
-    def schema(trm) -> dict:
-        from model.mods.func import schema as _schema
-        return _schema(trm)
+    from model.helper.types import _SchemaDescriptor
+    schema = _SchemaDescriptor()
 
 
 class OrderedModel(Model, metaclass=ORDERED_MODEL):

@@ -1,5 +1,16 @@
 from threading import local
 
+class _SchemaDescriptor:
+    def __get__(self, instance, owner):
+        from model.mods.func import schema as _schema
+        target = owner if instance is None else instance
+
+        def schema():
+            return _schema(target)
+
+        schema.__name__ = "schema"
+        return schema
+
 __state__ = local()
 
 class STATE:

@@ -1,10 +1,14 @@
-from typing import TypeVar, Type
+from typing import TypeVar, Type, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from model.mods.types import Model, Schema
 
 T = TypeVar('T')
 
 class model:
     def __new__(cls, __cls__: Type[T] = None, *, check: bool = None, lazy: bool = None, strict: bool = None, ordered: bool = None):
-        def decorator(c: Type[T]) -> Type[T]:
+
+        def decorator(c: Type[T]) -> 'Union[Type[T], Type[Model]]':
             from model.mods.resolve import resolve
             from model.mods.types import (
                 Model, OrderedModel, StrictModel,
@@ -88,12 +92,12 @@ def field(func):
 
     return property(getter)
 
-
-def schema(obj):
+def schema(obj) -> 'Type[Schema]':
     from model.mods.check import check
-
     def _traverse(val):
-        if check.model.ismodel(type(val)):
+        if check.model.ismodel(val):
+            return schema(val)
+        elif check.model.ismodel(type(val)):
             return schema(val)
         elif isinstance(val, list):
             return [_traverse(v) for v in val]
@@ -108,18 +112,19 @@ def schema(obj):
         from typed.mods.func import hints
         from typed import get
 
-        schema_fields = dict(getattr(obj, "__fields__", {}))
+        raw_fields = dict(getattr(obj, "__fields__", {}))
+        schema_fields = {}
 
+        for k, v in raw_fields.items():
+            schema_fields[k] = _traverse(v)
         for key in dir(obj):
             attr = getattr(obj, key, None)
             if isinstance(attr, property):
                 h = hints(attr.fget)
                 if 'return' in h:
-                    schema_fields[key] = h['return']
-
+                    schema_fields[key] = _traverse(h['return'])
         is_strict = get(obj, "__flags__.model.is_strict", False)
         is_ordered = get(obj, "__flags__.model.is_ordered", False)
-
         if is_strict:
             return StrictSchema(**schema_fields)
         if is_ordered:
@@ -129,7 +134,6 @@ def schema(obj):
     meta = type(obj)
     fields = getattr(meta, "__fields__", {})
     out = {}
-
     for key in fields:
         if hasattr(obj, key):
             out[key] = _traverse(getattr(obj, key))
@@ -140,3 +144,22 @@ def schema(obj):
             out[key] = _traverse(getattr(obj, key))
 
     return out
+
+from typed.poly import Poly
+
+fields = Poly("__fields__")
+
+def unwrap(obj):
+    fields = getattr(obj, "__fields__", None)
+    if fields is not None:
+        return {k: unwrap(v) for k, v in fields.items()}
+
+    if isinstance(obj, dict):
+        return {k: unwrap(v) for k, v in obj.items()}
+
+    if isinstance(obj, list):
+        return [unwrap(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(unwrap(v) for v in obj)
+
+    return obj
