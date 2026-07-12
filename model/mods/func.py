@@ -1,4 +1,5 @@
 from typing import TypeVar, Type, TYPE_CHECKING, Union
+from typed.poly import Poly
 
 if TYPE_CHECKING:
     from model.mods.types import Model, Schema
@@ -27,19 +28,20 @@ class model:
                 fields = {}
 
             defaults = {k: getattr(c, k) for k in fields if hasattr(c, k)}
+            extends = [b for b in c.__bases__ if b is not object]
 
             if lz:
                 if od:
-                    return LazyOrderedModel(__origin_cls__=c, __defaults__=defaults, **fields)
+                    return LazyOrderedModel(__origin_cls__=c, __defaults__=defaults, __extends__=extends, **fields)
                 if st:
-                    return LazyStrictModel(__origin_cls__=c, __defaults__=defaults, **fields)
-                return LazyModel(__origin_cls__=c, __defaults__=defaults, **fields)
+                    return LazyStrictModel(__origin_cls__=c, __defaults__=defaults, __extends__=extends, **fields)
+                return LazyModel(__origin_cls__=c, __defaults__=defaults, __extends__=extends, **fields)
             else:
                 if od:
-                    return OrderedModel(__origin_cls__=c, __defaults__=defaults, **fields)
+                    return OrderedModel(__origin_cls__=c, __defaults__=defaults, __extends__=extends, **fields)
                 if st:
-                    return StrictModel(__origin_cls__=c, __defaults__=defaults, **fields)
-                return Model(__origin_cls__=c, __defaults__=defaults, **fields)
+                    return StrictModel(__origin_cls__=c, __defaults__=defaults, __extends__=extends, **fields)
+                return Model(__origin_cls__=c, __defaults__=defaults, __extends__=extends, **fields) 
 
         if __cls__ is None:
             return decorator
@@ -52,7 +54,6 @@ class model:
     @staticmethod
     def ordered(__cls__: Type[T] = None, *, check: bool = None, lazy: bool = None) -> Type[T]:
         return model(__cls__, check=check, lazy=lazy, ordered=True)
-
 
 def field(func):
     from typed.mods.func import hints
@@ -145,8 +146,6 @@ def schema(obj) -> 'Type[Schema]':
 
     return out
 
-from typed.poly import Poly
-
 fields = Poly("__fields__")
 
 def unwrap(obj):
@@ -163,3 +162,27 @@ def unwrap(obj):
         return tuple(unwrap(v) for v in obj)
 
     return obj
+
+
+def reduce(cls, **kwargs):
+    from typed import get
+
+    is_model_cls = get(cls, "__flags__.model.is_model", False)
+    is_schema_cls = get(cls, "__flags__.model.is_schema", False)
+
+    if not (is_model_cls or is_schema_cls):
+        raise TypeError(f"Cannot reduce {type(cls)}. Target must be a Model or Schema class.")
+
+    if is_model_cls:
+        Reduced = type(cls).__call__(cls, __extends__=[cls], __defaults__=kwargs)
+    else:
+        Reduced = type(cls).__call__(cls, __extends__=[cls])
+
+    for k, v in kwargs.items():
+        setattr(Reduced, k, v)
+
+    base_name = getattr(cls, "__name__", "Type")
+    Reduced.__name__ = f"{base_name}Reduced"
+    Reduced.__display__ = f"{getattr(cls, '__display__', base_name)}Reduced"
+
+    return Reduced
