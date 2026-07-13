@@ -111,13 +111,13 @@ def schema(obj: 'Model') -> 'Type[Schema]':
         schema_fields = {}
 
         for k, v in raw_fields.items():
-            schema_fields[k] = _traverse(v)
+            schema_fields[k] = _traverse(v, callback=schema)
         for key in dir(obj):
             attr = getattr(obj, key, None)
             if isinstance(attr, property):
                 h = hints(attr.fget)
                 if 'return' in h:
-                    schema_fields[key] = _traverse(h['return'])
+                    schema_fields[key] = _traverse(h['return'], callback=schema)
         is_ordered = get(obj, "__flags__.model.is_ordered", False)
 
         if check.model.isstrict(obj):
@@ -133,12 +133,12 @@ def schema(obj: 'Model') -> 'Type[Schema]':
     if fields:
         for key in fields:
             if hasattr(obj, key):
-                out[key] = _traverse(getattr(obj, key))
+                out[key] = _traverse(getattr(obj, key), callback=schema)
 
     for key in dir(meta):
         attr = getattr(meta, key, None)
         if isinstance(attr, property):
-            out[key] = _traverse(getattr(obj, key))
+            out[key] = _traverse(getattr(obj, key), callback=schema)
 
     return out
 

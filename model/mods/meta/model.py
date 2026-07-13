@@ -22,16 +22,38 @@ class MODEL(TYPE):
         return True
 
     def __issub__(typ, other):
-        from typed import prop
         from model.mods.check import check
 
-        if not check.every.issub(
-            (prop.typeof(typ), prop.typeof(other)),
-            MODEL
-        ):
+        if isinstance(typ, MODEL) and isinstance(other, MODEL):
+            return check.issub(typ.schema(), other.schema())
+
+        return False
+
+    def __le__(typ, other):
+        return typ.__issub__(other)
+
+    def __lt__(typ, other):
+        return typ.__issub__(other) and typ is not other
+
+    def __ge__(typ, other):
+        from model.mods.check import check
+        return check.issub(other, typ)
+
+    def __gt__(typ, other):
+        from model.mods.check import check
+        return check.issub(other, typ) and typ is not other
+
+    def __eq__(typ, other):
+        if typ is other:
+            return True
+        from model.mods.check import check
+        try:
+            return typ.__issub__(other) and check.issub(other, typ)
+        except Exception:
             return False
 
-        return check.issub(typ.schema(), other.schema())
+    def __ne__(typ, other):
+        return not typ.__eq__(other)
 
     def __call__(met, __origin_cls__=None, __defaults__=None, __extends__=None, **fields):
         if not getattr(met, '__is_base_model__', False):
