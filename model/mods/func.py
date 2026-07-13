@@ -2,6 +2,7 @@ from typing import TypeVar, Type, TYPE_CHECKING, Union
 from typed.poly import Poly
 
 if TYPE_CHECKING:
+    from typed import Dict
     from model.mods.types import Model, Schema
 
 T = TypeVar('T')
@@ -11,7 +12,7 @@ class model:
 
         def decorator(c: Type[T]) -> 'Union[Type[T], Type[Model]]':
             from model.mods.resolve import resolve
-            from model.mods.types import (
+            from model.mods.types.model import (
                 Model, OrderedModel, StrictModel,
                 LazyModel, LazyOrderedModel, LazyStrictModel
             )
@@ -55,8 +56,11 @@ class model:
     def ordered(__cls__: Type[T] = None, *, check: bool = None, lazy: bool = None) -> Type[T]:
         return model(__cls__, check=check, lazy=lazy, ordered=True)
 
-def field(func):
-    from typed.mods.func import hints
+def field(func: callable) -> property:
+    """
+    The field decorator
+    """
+    from typed.func import hints
     from typed.err import NotDefined
     import functools
 
@@ -76,16 +80,14 @@ def field(func):
     @functools.wraps(func)
     def getter(self):
         value = func(self)
-        from typed.mods.check import check
+        from model.mods.check import check
 
         if not check.bind.cod(func, sig, value):
             from model.mods.err import FieldErr
-            from model.mods.check import _safe_term
-
             raise FieldErr(
                 message=f"Field returned invalid type.",
                 key=func,
-                field=_safe_term(value),
+                field=value,
                 expected=(sig.cod,),
                 received=type(value)
             )
@@ -93,25 +95,17 @@ def field(func):
 
     return property(getter)
 
-def schema(obj) -> 'Type[Schema]':
+def schema(obj: 'Model') -> 'Type[Schema]':
     from model.mods.check import check
-    def _traverse(val):
-        if check.model.ismodel(val):
-            return schema(val)
-        elif check.model.ismodel(type(val)):
-            return schema(val)
-        elif isinstance(val, list):
-            return [_traverse(v) for v in val]
-        elif isinstance(val, dict):
-            return {k: _traverse(v) for k, v in val.items()}
-        elif isinstance(val, tuple):
-            return tuple(_traverse(v) for v in val)
-        return val
+
+    if check.schema.isschema(obj):
+        return obj
 
     if check.model.ismodel(obj):
-        from model.mods.types import Schema, OrderedSchema, StrictSchema
-        from typed.mods.func import hints
-        from typed import get
+        from model.mods.types.schema import Schema, OrderedSchema, StrictSchema
+        from typed.func import hints
+        from typed.prop import get
+        from model.helper.func import _traverse
 
         raw_fields = dict(getattr(obj, "__fields__", {}))
         schema_fields = {}
@@ -124,20 +118,22 @@ def schema(obj) -> 'Type[Schema]':
                 h = hints(attr.fget)
                 if 'return' in h:
                     schema_fields[key] = _traverse(h['return'])
-        is_strict = get(obj, "__flags__.model.is_strict", False)
         is_ordered = get(obj, "__flags__.model.is_ordered", False)
-        if is_strict:
+
+        if check.model.isstrict(obj):
             return StrictSchema(**schema_fields)
-        if is_ordered:
+        if check.model.isordered(obj):
             return OrderedSchema(**schema_fields)
         return Schema(**schema_fields)
 
-    meta = type(obj)
+    from typed import prop
+    meta = prop.typeof(obj)
     fields = getattr(meta, "__fields__", {})
     out = {}
-    for key in fields:
-        if hasattr(obj, key):
-            out[key] = _traverse(getattr(obj, key))
+    if fields:
+        for key in fields:
+            if hasattr(obj, key):
+                out[key] = _traverse(getattr(obj, key))
 
     for key in dir(meta):
         attr = getattr(meta, key, None)
@@ -148,41 +144,34 @@ def schema(obj) -> 'Type[Schema]':
 
 fields = Poly("__fields__")
 
-def unwrap(obj):
-    fields = getattr(obj, "__fields__", None)
-    if fields is not None:
-        return {k: unwrap(v) for k, v in fields.items()}
+def unwrap(obj: 'Schema') -> 'Dict':
+    _fields = fields(obj)
+    from typed.err import NotDefined
+
+    if _fields is NotDefined:
+        return obj
 
     if isinstance(obj, dict):
         return {k: unwrap(v) for k, v in obj.items()}
 
     if isinstance(obj, list):
         return [unwrap(v) for v in obj]
+
     if isinstance(obj, tuple):
         return tuple(unwrap(v) for v in obj)
 
-    return obj
+    return {k: unwrap(v) for k, v in _fields.items()}
 
+def reduce(typ, **kwargs):
+    from model.mods.check import check
 
-def reduce(cls, **kwargs):
-    from typed import get
+    if check.model.ismodel(typ):
+        Reduced = type(typ).__call__(typ, __extends__=[typ], __defaults__=kwargs)
 
-    is_model_cls = get(cls, "__flags__.model.is_model", False)
-    is_schema_cls = get(cls, "__flags__.model.is_schema", False)
-
-    if not (is_model_cls or is_schema_cls):
-        raise TypeError(f"Cannot reduce {type(cls)}. Target must be a Model or Schema class.")
-
-    if is_model_cls:
-        Reduced = type(cls).__call__(cls, __extends__=[cls], __defaults__=kwargs)
-    else:
-        Reduced = type(cls).__call__(cls, __extends__=[cls])
+    if check.schema.isschema(typ):
+        Reduced = type(typ).__call__(typ, __extends__=[typ])
 
     for k, v in kwargs.items():
         setattr(Reduced, k, v)
-
-    base_name = getattr(cls, "__name__", "Type")
-    Reduced.__name__ = f"{base_name}Reduced"
-    Reduced.__display__ = f"{getattr(cls, '__display__', base_name)}Reduced"
 
     return Reduced

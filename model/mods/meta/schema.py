@@ -23,8 +23,8 @@ class SCHEMA(DICT):
         from typed import prop
         from model.mods.check import check
 
-        if not check.every.isterm(
-            (prop.typeof(typ, level=2), prop.typeof(other, level=2)),
+        if not check.every.issub(
+            (prop.typeof(typ), prop.typeof(other)),
             SCHEMA
         ):
             return False
@@ -101,8 +101,8 @@ class ORDERED_SCHEMA(SCHEMA):
         from typed import prop
         from model.mods.check import check
 
-        if not check.every.isterm(
-            (prop.typeof(typ, level=2), prop.typeof(other, level=2)),
+        if not check.every.issub(
+            (prop.typeof(typ), prop.typeof(other)),
             ORDERED_SCHEMA
         ):
             return False
@@ -141,7 +141,7 @@ class ORDERED_SCHEMA(SCHEMA):
         _resolved_check = resolved_check
         _typesystems = {TYPESYSTEM, typesystem}
 
-        class OrderedSchema(*bases, metaclass=type(met)):
+        class OrderedSchema(*bases, metaclass=ORDERED_SCHEMA):
             __kind__ = "type"
             __flags__ = Flags(is_constructor=True, model=ModelFlags(is_schema=True, is_ordered=True))
             __typesystems__ = _typesystems
@@ -176,8 +176,8 @@ class STRICT_SCHEMA(SCHEMA):
         from typed import prop
         from model.mods.check import check
 
-        if not check.every.isterm(
-            (prop.typeof(typ, level=2), prop.typeof(other, level=2)),
+        if not check.every.issub(
+            (prop.typeof(typ), prop.typeof(other)),
             STRICT_SCHEMA
         ):
             return False
@@ -216,7 +216,7 @@ class STRICT_SCHEMA(SCHEMA):
         _resolved_check = resolved_check
         _typesystems = {TYPESYSTEM, typesystem}
 
-        class StrictSchema(*bases, metaclass=type(met)):
+        class StrictSchema(*bases, metaclass=STRICT_SCHEMA):
             __kind__ = "type"
             __flags__ = Flags(is_constructor=True, model=ModelFlags(is_schema=True, is_strict=True))
             __typesystems__ = _typesystems

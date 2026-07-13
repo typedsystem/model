@@ -8,7 +8,7 @@ class MODEL(TYPE):
         from typed.mods.typesystem import isterm
 
         if getattr(typ, '__is_base_model__', False):
-            return isinstance(trm, type)
+            return (isinstance(trm, type) and issubclass(trm, typ)) or isinstance(trm, typ)
 
         if isinstance(trm, typ):
             return True
@@ -25,8 +25,8 @@ class MODEL(TYPE):
         from typed import prop
         from model.mods.check import check
 
-        if not check.every.isterm(
-            (prop.typeof(typ, level=2), prop.typeof(other, level=2)),
+        if not check.every.issub(
+            (prop.typeof(typ), prop.typeof(other)),
             MODEL
         ):
             return False
@@ -56,7 +56,7 @@ class MODEL(TYPE):
 
         _display_name = display_name
 
-        class Model(*bases, metaclass=type(met)):
+        class Model(*bases, metaclass=MODEL):
             __kind__ = "type"
             __display__ = _display_name
             __fields__ = _fields
@@ -87,8 +87,8 @@ class ORDERED_MODEL(MODEL):
         from typed import prop
         from model.mods.check import check
 
-        if not check.every.isterm(
-            (prop.typeof(typ, level=2), prop.typeof(other, level=2)),
+        if not check.every.issub(
+            (prop.typeof(typ), prop.typeof(other)),
             ORDERED_MODEL
         ):
             return False
@@ -118,7 +118,7 @@ class ORDERED_MODEL(MODEL):
 
         _display_name = display_name
 
-        class OrderedModel(*bases, metaclass=type(met)):
+        class OrderedModel(*bases, metaclass=ORDERED_MODEL):
             __kind__ = "type"
             __display__ = _display_name
             __fields__ = _fields
@@ -148,8 +148,8 @@ class STRICT_MODEL(MODEL):
         from typed import prop
         from model.mods.check import check
 
-        if not check.every.isterm(
-            (prop.typeof(typ, level=2), prop.typeof(other, level=2)),
+        if not check.every.issub(
+            (prop.typeof(typ), prop.typeof(other)),
             STRICT_MODEL
         ):
             return False
@@ -179,7 +179,7 @@ class STRICT_MODEL(MODEL):
 
         _display_name = display_name
 
-        class StrictModel(*bases, metaclass=type(met)):
+        class StrictModel(*bases, metaclass=STRICT_MODEL):
             __kind__ = "type"
             __display__ = _display_name
             __fields__ = _fields
@@ -214,7 +214,7 @@ class LAZY_MODEL(MODEL):
 
         _display_name = display_name
 
-        class LazyModel(*bases, metaclass=type(met)):
+        class LazyModel(*bases, metaclass=LAZY_MODEL):
             __kind__ = "type"
             __display__ = _display_name
             __fields__ = _fields
@@ -250,7 +250,7 @@ class LAZY_ORDERED_MODEL(LAZY_MODEL, ORDERED_MODEL):
 
         _display_name = display_name
 
-        class LazyOrderedModel(*bases, metaclass=type(met)):
+        class LazyOrderedModel(*bases, metaclass=LAZY_ORDERED_MODEL):
             __kind__ = "type"
             __display__ = _display_name
             __fields__ = _fields
@@ -286,7 +286,7 @@ class LAZY_STRICT_MODEL(LAZY_MODEL, STRICT_MODEL):
 
         _display_name = display_name
 
-        class LazyStrictModel(*bases, metaclass=type(met)):
+        class LazyStrictModel(*bases, metaclass=LAZY_STRICT_MODEL):
             __kind__ = "type"
             __display__ = _display_name
             __fields__ = _fields
