@@ -37,3 +37,8 @@ def _issub(sub_dict, sup_dict):
             if not issub(v_sub, v_sup):
                 return False
     return True
+
+def _schema(typ):
+    if not hasattr(typ, '__schema__'):
+        typ.__schema__ = typ.schema()
+    return typ.__schema__

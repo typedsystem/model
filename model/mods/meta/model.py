@@ -1,8 +1,11 @@
+import weakref
 from typed.meta import TYPE
+from typed.func import closure
 from model.helper.meta import _resolve
 
+@closure(lt="__issub__")
 class MODEL(TYPE):
-    __cache__ = {}
+    __cache__ = weakref.WeakValueDictionary()
 
     def __isterm__(typ, trm):
         from typed.mods.typesystem import isterm
@@ -22,38 +25,41 @@ class MODEL(TYPE):
         return True
 
     def __issub__(typ, other):
+        from model.helper.meta import _schema
         from model.mods.check import check
 
         if isinstance(typ, MODEL) and isinstance(other, MODEL):
-            return check.issub(typ.schema(), other.schema())
+            return check.issub(_schema(typ), _schema(other))
 
         return False
 
-    def __le__(typ, other):
-        return typ.__issub__(other)
-
-    def __lt__(typ, other):
-        return typ.__issub__(other) and typ is not other
-
-    def __ge__(typ, other):
+    def __join__(typ, other):
         from model.mods.check import check
-        return check.issub(other, typ)
+        if check.model.ismodel(other):
+            base_model = next((b for b in typ.__mro__ if getattr(b, '__is_base_model__', False)), typ)
+            return base_model(__extends__=[typ, other])
+        return NotImplemented
 
-    def __gt__(typ, other):
-        from model.mods.check import check
-        return check.issub(other, typ) and typ is not other
+    def __coprod__(typ, *args, **kwargs):
+        components = {typ.__name__: typ}
 
-    def __eq__(typ, other):
-        if typ is other:
-            return True
-        from model.mods.check import check
-        try:
-            return typ.__issub__(other) and check.issub(other, typ)
-        except Exception:
-            return False
+        for arg in args:
+            if isinstance(arg, type):
+                components[arg.__name__] = arg
 
-    def __ne__(typ, other):
-        return not typ.__eq__(other)
+        for k, v in kwargs.items():
+            if isinstance(v, type):
+                components[k] = v
+                if v.__name__ in components and components[v.__name__] is v and k != v.__name__:
+                    components.pop(v.__name__)
+            elif isinstance(v, str):
+                old_name = k.__name__ if isinstance(k, type) else k
+                if old_name in components:
+                    cls = components.pop(old_name)
+                    components[v] = cls
+
+        base_model = next((b for b in typ.__mro__ if getattr(b, '__is_base_model__', False)), typ)
+        return base_model(**components)
 
     def __call__(met, __origin_cls__=None, __defaults__=None, __extends__=None, **fields):
         if not getattr(met, '__is_base_model__', False):
@@ -106,13 +112,7 @@ class ORDERED_MODEL(MODEL):
         return True
 
     def __issub__(typ, other):
-        from typed import prop
-        from model.mods.check import check
-
-        if not check.every.issub(
-            (prop.typeof(typ), prop.typeof(other)),
-            ORDERED_MODEL
-        ):
+        if not isinstance(typ, ORDERED_MODEL) or not isinstance(other, ORDERED_MODEL):
             return False
 
         return super(ORDERED_MODEL, typ).__issub__(other)
@@ -167,13 +167,7 @@ class STRICT_MODEL(MODEL):
         return True
 
     def __issub__(typ, other):
-        from typed import prop
-        from model.mods.check import check
-
-        if not check.every.issub(
-            (prop.typeof(typ), prop.typeof(other)),
-            STRICT_MODEL
-        ):
+        if not isinstance(typ, STRICT_MODEL) or not isinstance(other, STRICT_MODEL):
             return False
 
         return super(STRICT_MODEL, typ).__issub__(other)

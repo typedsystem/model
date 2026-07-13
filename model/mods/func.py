@@ -1,9 +1,9 @@
-from typing import TypeVar, Type, TYPE_CHECKING, Union
+from typing import TypeVar, Type, TYPE_CHECKING, Union, Any, Dict
 from typed.poly import Poly
 
 if TYPE_CHECKING:
-    from typed import Dict
-    from model.mods.types import Model, Schema
+    from model.mods.types.model import Model
+    from model.mods.types.schema import Schema
 
 T = TypeVar('T')
 
@@ -49,11 +49,11 @@ class model:
         return decorator(__cls__)
 
     @staticmethod
-    def strict(__cls__: Type[T] = None, *, check: bool = None, lazy: bool = None) -> Type[T]:
+    def strict(__cls__: Type[T] = None, *, check: bool = None, lazy: bool = None) -> 'Union[Type[T], Type[Model]]':
         return model(__cls__, check=check, lazy=lazy, strict=True)
 
     @staticmethod
-    def ordered(__cls__: Type[T] = None, *, check: bool = None, lazy: bool = None) -> Type[T]:
+    def ordered(__cls__: Type[T] = None, *, check: bool = None, lazy: bool = None) -> 'Union[Type[T], Type[Model]]':
         return model(__cls__, check=check, lazy=lazy, ordered=True)
 
 def field(func: callable) -> property:
@@ -95,7 +95,7 @@ def field(func: callable) -> property:
 
     return property(getter)
 
-def schema(obj: 'Model') -> 'Type[Schema]':
+def schema(obj: 'Union[Model, Type[Model], Any]') -> 'Type[Schema]':
     from model.mods.check import check
 
     if check.schema.isschema(obj):
@@ -144,7 +144,7 @@ def schema(obj: 'Model') -> 'Type[Schema]':
 
 fields = Poly("__fields__")
 
-def unwrap(obj: 'Schema') -> 'Dict':
+def unwrap(obj: 'Union[Schema, Type[Schema], Any]') -> 'Dict[str, Any]':
     _fields = fields(obj)
     from typed.err import NotDefined
 
@@ -166,10 +166,14 @@ def reduce(typ, **kwargs):
     from model.mods.check import check
 
     if check.model.ismodel(typ):
-        Reduced = type(typ).__call__(typ, __extends__=[typ], __defaults__=kwargs)
+        base_model = next((b for b in typ.__mro__ if getattr(b, '__is_base_model__', False)), typ)
+        Reduced = base_model(__extends__=[typ], __defaults__=kwargs)
 
-    if check.schema.isschema(typ):
-        Reduced = type(typ).__call__(typ, __extends__=[typ])
+    elif check.schema.isschema(typ):
+        base_schema = next((b for b in typ.__mro__ if getattr(b, '__is_base_schema__', False)), typ)
+        Reduced = base_schema(__extends__=[typ])
+    else:
+        Reduced = typ
 
     for k, v in kwargs.items():
         setattr(Reduced, k, v)

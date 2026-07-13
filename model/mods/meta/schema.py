@@ -1,6 +1,8 @@
+from typed.func import closure
 from typed.meta import DICT
 from model.helper.meta import _resolve, _issub
 
+@closure(lt="__issub__")
 class SCHEMA(DICT):
     __cache__ = {}
 
@@ -20,16 +22,17 @@ class SCHEMA(DICT):
         return False
 
     def __issub__(typ, other):
-        from typed import prop
-        from model.mods.check import check
-
-        if not check.every.issub(
-            (prop.typeof(typ), prop.typeof(other)),
-            SCHEMA
-        ):
+        if not isinstance(typ, SCHEMA) or not isinstance(other, SCHEMA):
             return False
 
         return _issub(typ.unwrap(), other.unwrap())
+
+    def __join__(typ, other):
+        from model.mods.check import check
+        if check.schema.isschema(other):
+            base_schema = next((b for b in typ.__mro__ if getattr(b, '__is_base_schema__', False)), typ)
+            return base_schema(__extends__=[typ, other])
+        return NotImplemented
 
     def __call__(met, typesystem=None, __check__: bool=None, __extends__=None, **fields):
         if not getattr(met, '__is_base_schema__', False):

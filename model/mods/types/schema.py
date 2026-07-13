@@ -2,6 +2,7 @@ from model.mods.meta.schema import (
     SCHEMA, ORDERED_SCHEMA, STRICT_SCHEMA,
 )
 from model.mods.flags import Flags, ModelFlags
+from typing import Dict, Any
 
 class Schema(metaclass=SCHEMA):
     __flags__   = Flags(is_constructor=True, model=ModelFlags(is_schema=True))
@@ -26,7 +27,7 @@ class Schema(metaclass=SCHEMA):
         return key in trm.__dict__
 
     @classmethod
-    def unwrap(cls):
+    def unwrap(cls) -> Dict[str, Any]:
         from model.mods.func import unwrap as _unwrap
         return _unwrap(cls)
 
