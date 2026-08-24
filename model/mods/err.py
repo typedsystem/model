@@ -6,4 +6,6 @@ class ModelErr(TypeErr):
 class FieldErr(ModelErr):
     def __init__(self, message=None, field=None, **kwargs):
         self.field = field
-        super().__init__(message=message, term=field, **kwargs)
+        if "term" not in kwargs:
+            kwargs["term"] = field
+        super().__init__(message=message, **kwargs)
