@@ -2,7 +2,7 @@ from typing import TypeVar, Type, TYPE_CHECKING, Union, Any, Dict
 from typed.poly import Poly
 
 if TYPE_CHECKING:
-    from model.mods.types.model import Model
+    from model.mods.types.model_ import Model
     from model.mods.types.schema import Schema
 
 T = TypeVar('T')
@@ -12,7 +12,7 @@ class model:
 
         def decorator(c: Type[T]) -> 'Union[Type[T], Type[Model]]':
             from model.mods.resolve import resolve
-            from model.mods.types.model import (
+            from model.mods.types.model_ import (
                 Model, OrderedModel, StrictModel,
                 LazyModel, LazyOrderedModel, LazyStrictModel
             )
