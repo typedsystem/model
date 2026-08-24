@@ -28,7 +28,7 @@ class Schema(metaclass=SCHEMA):
 
     @classmethod
     def unwrap(cls) -> Dict[str, Any]:
-        from model.mods.func import unwrap as _unwrap
+        from model.mods.wrap import unwrap as _unwrap
         return _unwrap(cls)
 
 class OrderedSchema(Schema, metaclass=ORDERED_SCHEMA):

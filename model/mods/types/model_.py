@@ -14,7 +14,7 @@ class Model(metaclass=MODEL):
 
     @classmethod
     def schema(cls) -> 'Type[Schema]':
-        from model.mods.func import schema as _schema
+        from model.mods.wrap import schema as _schema
         return _schema(cls)
 
 class OrderedModel(Model, metaclass=ORDERED_MODEL):
