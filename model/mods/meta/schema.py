@@ -1,4 +1,4 @@
-from typed.func import closure
+from typed.wrap import closure
 from typed.meta import DICT
 from model.helper.meta import _resolve, _issub
 

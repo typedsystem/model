@@ -8,12 +8,13 @@ license = {text = "MIT"}
 authors = [
     {"name" = "Yuri Ximenes", "email" = "typed@gmx.ie"},
 ]
-dependencies = [
-]
 
 [project.optional-dependencies]
 git = [
     "typed @ git+https://github.com/typedsystem/typed"
+],
+pypi = [
+    "typedsystem"
 ]
 
 

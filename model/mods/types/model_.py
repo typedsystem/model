@@ -1,4 +1,4 @@
-from model.mods.meta.model import (
+from model.mods.meta.model_ import (
     MODEL, ORDERED_MODEL, STRICT_MODEL,
     LAZY_MODEL, LAZY_ORDERED_MODEL, LAZY_STRICT_MODEL
 )

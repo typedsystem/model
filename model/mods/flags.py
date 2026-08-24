@@ -1,4 +1,4 @@
-from typed.mods.flags import __FLAGS__, Flags as __Flags__, flag as __flag__
+from typed.mods.flags import __FLAGS__, Flags as __Flags__
 
 class ModelFlags(metaclass=__FLAGS__):
     def __init__(
@@ -47,11 +47,3 @@ class Flags(__Flags__):
         if model is None:
             model = ModelFlags()
         self.model = model
-
-class flag(__flag__):
-    class model:
-        is_model = "is_model"
-        is_strict = "is_strict"
-        is_ordered = "is_ordered"
-        is_schema = "is_schema"
-        is_lazy = "is_lazy"

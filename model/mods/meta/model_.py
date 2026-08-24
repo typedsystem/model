@@ -1,6 +1,6 @@
 import weakref
 from typed.meta import TYPE
-from typed.func import closure
+from typed.wrap import closure
 from model.helper.meta import _resolve
 
 @closure(lt="__issub__")
