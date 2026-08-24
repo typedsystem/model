@@ -27,18 +27,18 @@ class SchemaChecker(Checker):
 
 class ModelChecker(Checker):
     def ismodel(self, objs) -> bool:
-        from model.mods.types.model import Model
+        from model.mods.types.model_ import Model
         from model.helper.check import _base_check
         return _base_check(self, Model, objs)
 
     def isordered(self, objs) -> bool:
-        from model.mods.types.model import OrderedModel
+        from model.mods.types.model_ import OrderedModel
         from model.helper.check import _base_check
         return _base_check(self, OrderedModel, objs)
 
 
     def isstrict(self, objs) -> bool:
-        from model.mods.types.model import StrictModel
+        from model.mods.types.model_ import StrictModel
         from model.helper.check import _base_check
         return _base_check(self, StrictModel, objs)
 
@@ -49,7 +49,7 @@ class ModelChecker(Checker):
             if k not in fields:
                 fields[k] = default_val
 
-        from model.mods.types.model import Model
+        from model.mods.types.model_ import Model
         from model.helper.check import _validate
         return _validate(self, Model, typ, fields)
 
