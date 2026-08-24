@@ -4,7 +4,7 @@ __imports__ = {
     "model.mods.meta.schema": [
         "SCHEMA", "STRICT_SCHEMA", "ORDERED_SCHEMA"
     ],
-    "model.mods.meta.model": [
+    "model.mods.meta.model_": [
         "MODEL", "STRICT_MODEL", "ORDERED_MODEL",
         "LAZY_MODEL", "LAZY_STRICT_MODEL", "LAZY_ORDERED_MODEL"
     ],
@@ -14,7 +14,7 @@ if lazy(__imports__):
     from model.mods.types.schema import (
         SCHEMA, STRICT_SCHEMA, ORDERED_SCHEMA
     )
-    from model.mods.types.model import (
+    from model.mods.types.model_ import (
         MODEL, STRICT_MODEL, ORDERED_MODEL,
         LAZY_MODEL, LAZY_STRICT_MODEL, LAZY_ORDERED_MODEL
     )
