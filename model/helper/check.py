@@ -32,7 +32,7 @@ def _base_check(self, met, objs):
     return True
 
 def _validate(self, met, typ, fields):
-    from typed import check
+    from typed.mods.check import check
     if not check.isterm(typ, met):
         if self.explode:
             from typed.mods.err import TypeErr
@@ -43,13 +43,23 @@ def _validate(self, met, typ, fields):
                 expected=(SCHEMA,)
             )
         return False
-
     if not fields or not getattr(typ, '__check__', True):
         return True
 
     _fields = getattr(typ, '__fields__', {})
 
-    if self.isordered(typ):
+    is_ordered = False
+    is_strict = False
+    if met.__name__ == 'Schema':
+        from model.mods.types.schema import OrderedSchema, StrictSchema
+        is_ordered = check.isterm(typ, OrderedSchema)
+        is_strict = check.isterm(typ, StrictSchema)
+    else:
+        from model.mods.types.model_ import OrderedModel, StrictModel
+        is_ordered = check.isterm(typ, OrderedModel)
+        is_strict = check.isterm(typ, StrictModel)
+
+    if is_ordered:
         extra = [k for k in fields if k not in _fields]
         if extra:
             if self.explode:
@@ -62,7 +72,7 @@ def _validate(self, met, typ, fields):
                 )
             return False
 
-    if self.isstrict(typ):
+    if is_strict:
         expected_order = [k for k in fields if k in _fields]
         provided_order = list(fields.keys())
         if expected_order != provided_order:
@@ -86,14 +96,11 @@ def _validate(self, met, typ, fields):
                     expected=(typ,)
                 )
             return False
-
         val = fields[k]
-
-        from typed import check
         if not check.isterm(val, expected_type):
             if self.explode:
                 from model.mods.err import ModelErr
-                from typed import prop
+                from typed.mods.prop import prop
                 raise ModelErr(
                     message=f"Field has invalid type",
                     term=val,
@@ -102,4 +109,5 @@ def _validate(self, met, typ, fields):
                     received=prop.typeof(val)
                 )
             return False
+
     return True
