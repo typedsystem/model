@@ -85,8 +85,8 @@ def _validate(self, met, typ, fields):
                 )
             return False
 
-    for k, expected_type in fields.items():
-        if k not in _fields:
+    for k, expected_type in _fields.items():
+        if k not in fields:
             if self.explode:
                 from model.mods.err import FieldErr
                 raise FieldErr(
