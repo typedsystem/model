@@ -12,7 +12,7 @@ authors = [
 [project.optional-dependencies]
 git = [
     "typed @ git+https://github.com/typedsystem/typed"
-],
+]
 pypi = [
     "typedsystem"
 ]
